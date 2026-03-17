@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Time ON — Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+/* ═══════════════════════════════════════════════
+   RESET & ROOT
+═══════════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;
+  --surface:#181c27;
+  --surface2:#1f2436;
+  --border:#2a3048;
+  --accent:#4f6ef7;
+  --accent2:#7c3aed;
+  --green:#22c55e;
+  --yellow:#f59e0b;
+  --red:#ef4444;
+  --orange:#f97316;
+  --text:#e2e8f0;
+  --muted:#64748b;
+  --card-radius:14px;
+  --sidebar-w:240px;
+  --header-h:60px;
+  --font:'Inter',sans-serif;
+  --font-display:'Space Grotesk',sans-serif;
+}
+
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.5;overflow:hidden}
+
+/* ═══════════════════════════════════════════════
+   LAYOUT
+═══════════════════════════════════════════════ */
+#app{display:flex;height:100vh}
+
+/* ── Sidebar ── */
+.sidebar{
+  width:var(--sidebar-w);min-width:var(--sidebar-w);
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  overflow-y:auto;overflow-x:hidden;
+  transition:width .25s ease;
+  z-index:100;
+}
+.sidebar-logo{
+  display:flex;align-items:center;gap:10px;
+  padding:18px 16px 14px;
+  border-bottom:1px solid var(--border);
+  font-family:var(--font-display);font-weight:700;font-size:18px;
+  letter-spacing:-.3px;
+}
+.sidebar-logo .logo-icon{
+  width:32px;height:32px;border-radius:8px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;flex-shrink:0;
+}
+.sidebar-section-label{
+  font-size:10px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.12em;color:var(--muted);
+  padding:16px 16px 6px;
+}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 14px;margin:1px 8px;
+  border-radius:8px;cursor:pointer;
+  font-size:13px;font-weight:500;color:var(--muted);
+  transition:all .15s;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;
+  border:none;background:none;text-align:left;width:calc(100% - 16px);
+}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:rgba(79,110,247,.15);color:var(--accent)}
+.nav-item .nav-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+.nav-item .nav-badge{
+  margin-left:auto;font-size:10px;font-weight:600;
+  background:var(--accent);color:#fff;
+  border-radius:10px;padding:1px 6px;
+}
+
+/* ── Main area ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* ── Header ── */
+.topbar{
+  height:var(--header-h);
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:12px;
+  padding:0 20px;flex-shrink:0;
+}
+.topbar-title{font-family:var(--font-display);font-size:16px;font-weight:600}
+.topbar-spacer{flex:1}
+.period-filter{display:flex;gap:4px;background:var(--surface2);padding:4px;border-radius:8px}
+.period-btn{
+  padding:5px 14px;border-radius:6px;border:none;
+  background:transparent;color:var(--muted);
+  font-size:12px;font-weight:500;cursor:pointer;transition:.15s;
+}
+.period-btn.active{background:var(--accent);color:#fff}
+.team-select{
+  background:var(--surface2);border:1px solid var(--border);
+  color:var(--text);border-radius:8px;padding:6px 12px;
+  font-size:12px;cursor:pointer;
+}
+.btn-primary{
+  background:var(--accent);color:#fff;border:none;
+  padding:7px 16px;border-radius:8px;font-size:12px;font-weight:600;
+  cursor:pointer;display:flex;align-items:center;gap:6px;transition:.15s;
+}
+.btn-primary:hover{background:#3d5ce0}
+
+/* ── Page content ── */
+.page-content{flex:1;overflow-y:auto;padding:20px;display:none}
+.page-content.active{display:block}
+
+/* ═══════════════════════════════════════════════
+   KPI CARDS
+═══════════════════════════════════════════════ */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
+@media(max-width:1200px){.kpi-grid{grid-template-columns:repeat(3,1fr)}}
+.kpi-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--card-radius);padding:18px 16px;
+  display:flex;flex-direction:column;gap:8px;
+  transition:transform .15s,border-color .15s;
+  cursor:default;
+}
+.kpi-card:hover{transform:translateY(-2px);border-color:var(--accent)}
+.kpi-card-top{display:flex;align-items:center;justify-content:space-between}
+.kpi-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.kpi-trend{font-size:11px;font-weight:600;padding:2px 7px;border-radius:12px}
+.kpi-value{font-family:var(--font-display);font-size:32px;font-weight:700;line-height:1}
+.kpi-label{font-size:12px;color:var(--muted);font-weight:400}
+.kpi-total .kpi-icon{background:rgba(79,110,247,.15);color:var(--accent)}
+.kpi-working .kpi-icon{background:rgba(34,197,94,.15);color:var(--green)}
+.kpi-break .kpi-icon{background:rgba(245,158,11,.15);color:var(--yellow)}
+.kpi-stopped .kpi-icon{background:rgba(239,68,68,.15);color:var(--red)}
+.kpi-notinst .kpi-icon{background:rgba(100,116,139,.15);color:var(--muted)}
+
+/* ═══════════════════════════════════════════════
+   CHARTS GRID
+═══════════════════════════════════════════════ */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.charts-grid.cols3{grid-template-columns:1fr 1fr 1fr}
+@media(max-width:1100px){.charts-grid{grid-template-columns:1fr}}
+.card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--card-radius);padding:18px;
+}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.card-title{font-family:var(--font-display);font-size:14px;font-weight:600}
+.card-subtitle{font-size:11px;color:var(--muted);margin-top:2px}
+.card-more{font-size:11px;color:var(--accent);cursor:pointer;text-decoration:none}
+.chart-wrap{position:relative;height:200px}
+
+/* ═══════════════════════════════════════════════
+   TOP APPS
+═══════════════════════════════════════════════ */
+.app-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.app-icon{width:28px;height:28px;border-radius:6px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.app-info{flex:1;min-width:0}
+.app-name{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app-pct{font-size:11px;color:var(--muted)}
+.app-bar{height:4px;background:var(--surface2);border-radius:2px;margin-top:4px;overflow:hidden}
+.app-bar-fill{height:100%;border-radius:2px;background:var(--accent);transition:width .6s ease}
+
+/* ═══════════════════════════════════════════════
+   TABLES
+═══════════════════════════════════════════════ */
+.data-table{width:100%;border-collapse:collapse}
+.data-table th{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:8px 10px;border-bottom:1px solid var(--border);text-align:left}
+.data-table td{padding:9px 10px;border-bottom:1px solid rgba(42,48,72,.5);font-size:12px;vertical-align:middle}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:rgba(255,255,255,.02)}
+.avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;overflow:hidden}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.emp-cell{display:flex;align-items:center;gap:8px}
+.emp-name{font-weight:500}
+.emp-dept{font-size:11px;color:var(--muted)}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600}
+.badge-green{background:rgba(34,197,94,.15);color:var(--green)}
+.badge-red{background:rgba(239,68,68,.15);color:var(--red)}
+.badge-yellow{background:rgba(245,158,11,.15);color:var(--yellow)}
+.badge-blue{background:rgba(79,110,247,.15);color:var(--accent)}
+.badge-gray{background:rgba(100,116,139,.15);color:var(--muted)}
+
+/* ═══════════════════════════════════════════════
+   BOTTOM GRID
+═══════════════════════════════════════════════ */
+.bottom-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+@media(max-width:1100px){.bottom-grid{grid-template-columns:1fr}}
+
+/* ═══════════════════════════════════════════════
+   LEAVE FORM
+═══════════════════════════════════════════════ */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group.full{grid-column:1/-1}
+.form-label{font-size:12px;font-weight:500;color:var(--muted)}
+.form-input{
+  background:var(--surface2);border:1px solid var(--border);
+  color:var(--text);border-radius:8px;padding:9px 12px;
+  font-size:13px;font-family:var(--font);outline:none;
+  transition:border-color .15s;
+}
+.form-input:focus{border-color:var(--accent)}
+.form-input option{background:var(--surface2)}
+.form-row{display:flex;gap:12px;margin-top:8px;align-items:center}
+.toggle-check{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer}
+.toggle-check input{width:16px;height:16px;accent-color:var(--accent);cursor:pointer}
+
+/* ═══════════════════════════════════════════════
+   LOADING SPINNER
+═══════════════════════════════════════════════ */
+.spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-overlay{display:flex;align-items:center;justify-content:center;height:120px;color:var(--muted);gap:10px;font-size:13px}
+
+/* ═══════════════════════════════════════════════
+   ATTENDANCE MATRIX
+═══════════════════════════════════════════════ */
+.matrix-wrap{overflow-x:auto}
+.matrix-table{border-collapse:collapse;font-size:11px}
+.matrix-table th,.matrix-table td{padding:4px 6px;white-space:nowrap}
+.matrix-table th{color:var(--muted);font-weight:600}
+.att-cell{width:22px;height:22px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
+.att-P{background:rgba(34,197,94,.2);color:var(--green)}
+.att-A{background:rgba(239,68,68,.2);color:var(--red)}
+.att-WFH{background:rgba(79,110,247,.2);color:var(--accent)}
+.att-H{background:rgba(245,158,11,.2);color:var(--yellow)}
+.att-{background:var(--surface2);color:var(--muted)}
+
+/* ═══════════════════════════════════════════════
+   HOLIDAY & LEAVE LIST
+═══════════════════════════════════════════════ */
+.holiday-item{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid rgba(42,48,72,.4)}
+.holiday-item:last-child{border-bottom:none}
+.holiday-date-box{
+  background:var(--surface2);border-radius:8px;padding:6px 10px;
+  text-align:center;min-width:46px;
+}
+.holiday-day{font-size:18px;font-weight:700;font-family:var(--font-display);line-height:1}
+.holiday-month{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.holiday-name{font-size:13px;font-weight:500}
+
+/* ═══════════════════════════════════════════════
+   REALTIME BADGE
+═══════════════════════════════════════════════ */
+.live-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:6px;animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ═══════════════════════════════════════════════
+   EMPTY STATE
+═══════════════════════════════════════════════ */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;color:var(--muted);gap:8px;font-size:13px}
+.empty-icon{font-size:36px;opacity:.4}
+
+/* ═══════════════════════════════════════════════
+   SCROLLBAR
+═══════════════════════════════════════════════ */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+
+/* ═══════════════════════════════════════════════
+   NOTIFICATION
+═══════════════════════════════════════════════ */
+#toast{
+  position:fixed;bottom:24px;right:24px;z-index:9999;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;padding:12px 18px;font-size:13px;
+  box-shadow:0 8px 32px rgba(0,0,0,.4);
+  transform:translateY(80px);opacity:0;
+  transition:all .3s ease;pointer-events:none;
+  display:flex;align-items:center;gap:10px;
+}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.success{border-left:3px solid var(--green)}
+#toast.error{border-left:3px solid var(--red)}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ══════════════════════════════════════════
+     SIDEBAR
+══════════════════════════════════════════ -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">⏱</div>
+    <span>Time ON</span>
+  </div>
+
+  <div class="sidebar-section-label">Realtime</div>
+  <button class="nav-item active" onclick="navigate('overview',this)">
+    <span class="nav-icon">📊</span> Overview
+  </button>
+  <button class="nav-item" onclick="navigate('my-team',this)">
+    <span class="nav-icon">👥</span> My Team
+  </button>
+
+  <div class="sidebar-section-label">Proof of Work</div>
+  <button class="nav-item" onclick="navigate('screenshots',this)">
+    <span class="nav-icon">🖼</span> Screenshots
+  </button>
+  <button class="nav-item" onclick="navigate('timelapse',this)">
+    <span class="nav-icon">🎬</span> Timelapse
+  </button>
+  <button class="nav-item" onclick="navigate('timesheet',this)">
+    <span class="nav-icon">📋</span> Timesheet
+  </button>
+  <button class="nav-item" onclick="navigate('risk-users',this)">
+    <span class="nav-icon">⚠️</span> Risk Users
+  </button>
+  <button class="nav-item" onclick="navigate('timeline',this)">
+    <span class="nav-icon">📅</span> Timeline
+  </button>
+  <button class="nav-item" onclick="navigate('reports',this)">
+    <span class="nav-icon">📈</span> Reports
+  </button>
+  <button class="nav-item" onclick="navigate('alerts',this)">
+    <span class="nav-icon">🔔</span> Real Time Alert <span class="nav-badge">3</span>
+  </button>
+
+  <div class="sidebar-section-label">Leave Management</div>
+  <button class="nav-item" onclick="navigate('apply-leave',this)">
+    <span class="nav-icon">✈️</span> Apply Leave
+  </button>
+  <button class="nav-item" onclick="navigate('leave-summary',this)">
+    <span class="nav-icon">📄</span> Leave Summary
+  </button>
+  <button class="nav-item" onclick="navigate('manage-leave',this)">
+    <span class="nav-icon">⚙️</span> Manage Leave
+  </button>
+</aside>
+
+<!-- ══════════════════════════════════════════
+     MAIN
+══════════════════════════════════════════ -->
+<div class="main">
+
+  <!-- Top Bar -->
+  <header class="topbar">
+    <span class="topbar-title" id="page-title">
+      <span class="live-dot"></span>Overview
+    </span>
+    <span class="topbar-spacer"></span>
+    <div class="period-filter">
+      <button class="period-btn active" onclick="setPeriod('today',this)">Today</button>
+      <button class="period-btn" onclick="setPeriod('week',this)">Week</button>
+      <button class="period-btn" onclick="setPeriod('month',this)">Month</button>
+    </div>
+    <select class="team-select" id="team-filter" onchange="setTeam(this.value)">
+      <option value="">All Teams</option>
+    </select>
+    <button class="btn-primary" onclick="showAddUser()">+ ADD USERS</button>
+  </header>
+
+  <!-- ── PAGE: OVERVIEW ── -->
+  <div class="page-content active" id="page-overview">
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid" id="kpi-grid">
+      <div class="kpi-card kpi-total"><div class="kpi-card-top"><div class="kpi-icon">👤</div></div><div class="kpi-value" id="k-total">—</div><div class="kpi-label">Total Members</div></div>
+      <div class="kpi-card kpi-working"><div class="kpi-card-top"><div class="kpi-icon">🟢</div></div><div class="kpi-value" id="k-working">—</div><div class="kpi-label">Working</div></div>
+      <div class="kpi-card kpi-break"><div class="kpi-card-top"><div class="kpi-icon">☕</div></div><div class="kpi-value" id="k-break">—</div><div class="kpi-label">On Break</div></div>
+      <div class="kpi-card kpi-stopped"><div class="kpi-card-top"><div class="kpi-icon">🔴</div></div><div class="kpi-value" id="k-stopped">—</div><div class="kpi-label">Stopped</div></div>
+      <div class="kpi-card kpi-notinst"><div class="kpi-card-top"><div class="kpi-icon">📵</div></div><div class="kpi-value" id="k-notinst">—</div><div class="kpi-label">Not Installed</div></div>
+    </div>
+
+    <!-- Row 2: Workload + Top Apps -->
+    <div class="charts-grid" style="margin-bottom:16px">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Work Load Analysis</div>
+            <div class="card-subtitle">Total working hours per day</div>
+          </div>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-workload"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Top Used Apps</div>
+          <a class="card-more">View All →</a>
+        </div>
+        <div id="top-apps-list">
+          <div class="loading-overlay"><div class="spinner"></div> Loading…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 3: Late + Absent -->
+    <div class="charts-grid" style="margin-bottom:16px">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Late Clock-in Today</div>
+            <div class="card-subtitle" id="late-count">—</div>
+          </div>
+        </div>
+        <div id="late-table-wrap">
+          <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Absence Today</div>
+            <div class="card-subtitle" id="absent-count">—</div>
+          </div>
+        </div>
+        <div id="absent-table-wrap">
+          <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 4: Work Hours + Holidays + Leaves -->
+    <div class="bottom-grid">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Work Hours Summary</div>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-hours"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Upcoming Holidays</div>
+        </div>
+        <div id="holidays-list">
+          <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Upcoming Leaves</div>
+        </div>
+        <div id="leaves-list">
+          <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+  </div><!-- /overview -->
+
+  <!-- ── PAGE: MY TEAM ── -->
+  <div class="page-content" id="page-my-team">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">My Team</div>
+      </div>
+      <div id="team-table-wrap">
+        <div class="loading-overlay"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PAGE: TIMESHEET ── -->
+  <div class="page-content" id="page-timesheet">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Monthly Attendance Matrix</div>
+      </div>
+      <div id="matrix-wrap" class="matrix-wrap">
+        <div class="loading-overlay"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PAGE: APPLY LEAVE ── -->
+  <div class="page-content" id="page-apply-leave">
+    <div class="card" style="max-width:640px">
+      <div class="card-header">
+        <div><div class="card-title">Apply Leave</div><div class="card-subtitle">Submit a leave request</div></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">Employee *</label>
+          <select class="form-input" id="lv-employee" onchange="loadLeaveBalance()">
+            <option value="">Select Employee…</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Leave Type *</label>
+          <select class="form-input" id="lv-type" onchange="loadLeaveBalance()">
+            <option value="">Select Type…</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Available Balance</label>
+          <div class="form-input" id="lv-balance" style="background:var(--surface2);color:var(--muted)">—</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">From Date *</label>
+          <input type="date" class="form-input" id="lv-from"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">To Date *</label>
+          <input type="date" class="form-input" id="lv-to"/>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Reason</label>
+          <textarea class="form-input" id="lv-reason" rows="3" style="resize:vertical"></textarea>
+        </div>
+        <div class="form-group full">
+          <label class="toggle-check">
+            <input type="checkbox" id="lv-halfday" onchange="toggleHalfDay()"/>
+            Half Day
+          </label>
+        </div>
+        <div class="form-group full" id="halfday-date-group" style="display:none">
+          <label class="form-label">Half Day Date</label>
+          <input type="date" class="form-input" id="lv-halfday-date"/>
+        </div>
+      </div>
+      <div class="form-row" style="margin-top:20px">
+        <button class="btn-primary" onclick="submitLeave()" id="submit-leave-btn">
+          ✈️ Submit Leave
+        </button>
+        <button onclick="resetLeaveForm()" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:7px 16px;border-radius:8px;cursor:pointer;font-size:12px">
+          Reset
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PAGE: LEAVE SUMMARY ── -->
+  <div class="page-content" id="page-leave-summary">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Leave Summary</div>
+      </div>
+      <div id="leave-summary-wrap">
+        <div class="loading-overlay"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PAGE: MANAGE LEAVE ── -->
+  <div class="page-content" id="page-manage-leave">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Manage Leave</div></div>
+      <div id="manage-leave-wrap">
+        <div class="loading-overlay"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PAGE: REPORTS ── -->
+  <div class="page-content" id="page-reports">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Reports</div></div>
+      <div class="empty-state"><div class="empty-icon">📊</div>Reports module — connect to ERPNext Analytics</div>
+    </div>
+  </div>
+
+  <!-- ── PAGE: ALERTS ── -->
+  <div class="page-content" id="page-alerts">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Real Time Alerts</div></div>
+      <div class="empty-state"><div class="empty-icon">🔔</div>Alerts module — configure in ERPNext Notification</div>
+    </div>
+  </div>
+
+  <!-- ── PAGE: GENERIC ── -->
+  <div class="page-content" id="page-generic">
+    <div class="empty-state"><div class="empty-icon">🚧</div><span id="generic-label">Page under construction</span></div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /app -->
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- ══════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════ -->
+<script>
+// ─────────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────────
+let currentPeriod = 'today';
+let currentTeam   = '';
+let workloadChart = null;
+let hoursChart    = null;
+let currentPage   = 'overview';
+
+// ─────────────────────────────────────────
+//  ERPNext API call wrapper
+// ─────────────────────────────────────────
+async function api(method, args = {}) {
+  const base = window.frappe ? '' : 'https://erpnext-fqx-kse.f.frappe.cloud';
+  const params = new URLSearchParams({ cmd: method, ...args });
+  try {
+    const res = await fetch(`${base}/api/method/${method}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Frappe-CSRF-Token': getCsrf() },
+      body: params,
+      credentials: 'include',
+    });
+    if (!res.ok) throw new Error(res.statusText);
+    const data = await res.json();
+    return data.message ?? data;
+  } catch (e) {
+    console.warn('API error:', method, e);
+    return null;
+  }
+}
+
+function getCsrf() {
+  return window.frappe?.csrf_token ?? getCookie('X-Frappe-CSRF-Token') ?? '';
+}
+function getCookie(name) {
+  const m = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return m ? decodeURIComponent(m[2]) : '';
+}
+
+// ─────────────────────────────────────────
+//  MOCK DATA (fallback when not in ERPNext)
+// ─────────────────────────────────────────
+function mockStats()  { return { total:48, working:32, on_break:5, stopped:8, not_installed:3 }; }
+function mockWorkload(){ return { labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], hours:[142,188,210,176,224,98,12] }; }
+function mockHours()  { return [{employee_name:'Ahmed Ali',hours:9.5},{employee_name:'Sara Mohamed',hours:8.8},{employee_name:'Khaled Hassan',hours:8.2},{employee_name:'Nour Ibrahim',hours:7.9},{employee_name:'Omar Farouk',hours:7.5}]; }
+function mockLate()   { return [{employee_name:'Ahmed Ali',department:'HR',checkin_time:'09:22',shift_start:'09:00',late_by_minutes:22},{employee_name:'Sara Mohamed',department:'IT',checkin_time:'09:45',shift_start:'09:00',late_by_minutes:45},{employee_name:'Khaled Hassan',department:'Finance',checkin_time:'10:12',shift_start:'09:00',late_by_minutes:72}]; }
+function mockAbsent() { return [{employee_name:'Nour Ibrahim',department:'Sales'},{employee_name:'Omar Farouk',department:'IT'}]; }
+function mockHolidays(){ return [{holiday_date:'2025-04-25',description:'Sinai Liberation Day'},{holiday_date:'2025-05-01',description:'Labor Day'},{holiday_date:'2025-06-30',description:'Revolution Anniversary'}]; }
+function mockLeaves() { return [{employee_name:'Ahmed Ali',leave_type:'Annual Leave',from_date:'2025-04-10',to_date:'2025-04-14',total_leave_days:5},{employee_name:'Sara Mohamed',leave_type:'Sick Leave',from_date:'2025-04-18',to_date:'2025-04-19',total_leave_days:2}]; }
+function mockTeam()   { return [{name:'EMP-001',employee_name:'Ahmed Ali',department:'HR',designation:'Manager',date_of_joining:'2022-01-15'},{name:'EMP-002',employee_name:'Sara Mohamed',department:'IT',designation:'Developer',date_of_joining:'2021-06-01'},{name:'EMP-003',employee_name:'Khaled Hassan',department:'Finance',designation:'Accountant',date_of_joining:'2023-03-10'}]; }
+function mockLeaveSummary() { return [{employee_name:'Ahmed Ali',leave_type:'Annual Leave',from_date:'2025-01-15',to_date:'2025-01-18',total_leave_days:4},{employee_name:'Sara Mohamed',leave_type:'Sick Leave',from_date:'2025-02-10',to_date:'2025-02-11',total_leave_days:2}]; }
+
+// ─────────────────────────────────────────
+//  NAVIGATION
+// ─────────────────────────────────────────
+const PAGE_TITLES = {
+  overview:'Overview', 'my-team':'My Team', screenshots:'Screenshots',
+  timelapse:'Timelapse', timesheet:'Timesheet', 'risk-users':'Risk Users',
+  timeline:'Timeline', reports:'Reports', alerts:'Real Time Alerts',
+  'apply-leave':'Apply Leave', 'leave-summary':'Leave Summary', 'manage-leave':'Manage Leave',
+};
+
+function navigate(page, btn) {
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+
+  document.querySelectorAll('.page-content').forEach(p=>p.classList.remove('active'));
+
+  const pageMap = {
+    overview:'page-overview', 'my-team':'page-my-team', timesheet:'page-timesheet',
+    'apply-leave':'page-apply-leave', 'leave-summary':'page-leave-summary',
+    'manage-leave':'page-manage-leave', reports:'page-reports', alerts:'page-alerts',
+  };
+  const targetId = pageMap[page];
+  if(targetId) {
+    document.getElementById(targetId).classList.add('active');
+  } else {
+    document.getElementById('page-generic').classList.add('active');
+    document.getElementById('generic-label').textContent = PAGE_TITLES[page] + ' — coming soon';
+  }
+
+  const titleEl = document.getElementById('page-title');
+  const isLive = ['overview','my-team'].includes(page);
+  titleEl.innerHTML = (isLive ? '<span class="live-dot"></span>' : '') + (PAGE_TITLES[page]||page);
+  currentPage = page;
+
+  if(page==='overview')       loadOverview();
+  if(page==='my-team')        loadMyTeam();
+  if(page==='timesheet')      loadMatrix();
+  if(page==='apply-leave')    initLeaveForm();
+  if(page==='leave-summary')  loadLeaveSummary();
+  if(page==='manage-leave')   loadManageLeave();
+}
+
+// ─────────────────────────────────────────
+//  PERIOD & TEAM FILTERS
+// ─────────────────────────────────────────
+function setPeriod(period, btn) {
+  currentPeriod = period;
+  document.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(currentPage==='overview') loadOverview();
+}
+function setTeam(val) {
+  currentTeam = val;
+  if(currentPage==='overview') loadOverview();
+  if(currentPage==='my-team')  loadMyTeam();
+}
+
+// ─────────────────────────────────────────
+//  LOAD OVERVIEW
+// ─────────────────────────────────────────
+async function loadOverview() {
+  loadKpis();
+  loadWorkload();
+  loadTopApps();
+  loadLate();
+  loadAbsent();
+  loadWorkHours();
+  loadHolidays();
+  loadUpcomingLeaves();
+}
+
+async function loadKpis() {
+  let d = await api('dashboard.get_team_stats', { period: currentPeriod, team: currentTeam });
+  if(!d) d = mockStats();
+  document.getElementById('k-total').textContent   = d.total;
+  document.getElementById('k-working').textContent  = d.working;
+  document.getElementById('k-break').textContent    = d.on_break;
+  document.getElementById('k-stopped').textContent  = d.stopped;
+  document.getElementById('k-notinst').textContent  = d.not_installed;
+}
+
+async function loadWorkload() {
+  let d = await api('dashboard.get_workload_analysis', { period: currentPeriod, team: currentTeam });
+  if(!d) d = mockWorkload();
+
+  const ctx = document.getElementById('chart-workload').getContext('2d');
+  if(workloadChart) workloadChart.destroy();
+  workloadChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: d.labels,
+      datasets: [{
+        label: 'Hours',
+        data: d.hours,
+        backgroundColor: 'rgba(79,110,247,.7)',
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.parsed.y + 'h' } } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,.04)' }, ticks: { color: '#64748b', font: { size: 11 } } },
+        y: { grid: { color: 'rgba(255,255,255,.04)' }, ticks: { color: '#64748b', font: { size: 11 }, callback: v => v + 'h' } }
+      }
+    }
+  });
+}
+
+function loadTopApps() {
+  // Simulated — ERPNext doesn't track apps; connect your Time ON agent here
+  const apps = [
+    { name: 'Visual Studio Code', pct: 38, icon: '💻' },
+    { name: 'Google Chrome',      pct: 24, icon: '🌐' },
+    { name: 'Microsoft Teams',    pct: 18, icon: '💬' },
+    { name: 'Excel',              pct: 12, icon: '📊' },
+    { name: 'Slack',              pct: 8,  icon: '💬' },
+  ];
+  const html = apps.map(a => `
+    <div class="app-row">
+      <div class="app-icon">${a.icon}</div>
+      <div class="app-info">
+        <div class="app-name">${a.name}</div>
+        <div class="app-bar"><div class="app-bar-fill" style="width:${a.pct}%"></div></div>
+      </div>
+      <div class="app-pct">${a.pct}%</div>
+    </div>`).join('');
+  document.getElementById('top-apps-list').innerHTML = html;
+}
+
+async function loadLate() {
+  let d = await api('dashboard.get_late_clockin', { team: currentTeam });
+  if(!d) d = mockLate();
+  document.getElementById('late-count').textContent = d.length + ' employees late today';
+  if(!d.length) { document.getElementById('late-table-wrap').innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div>No late check-ins!</div>'; return; }
+  document.getElementById('late-table-wrap').innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>Employee</th><th>Department</th><th>Check-in</th><th>Late By</th></tr></thead>
+      <tbody>${d.map(r=>`
+        <tr>
+          <td><div class="emp-cell">${avatar(r.employee_name)}<div><div class="emp-name">${r.employee_name}</div></div></div></td>
+          <td><span class="badge badge-gray">${r.department||'—'}</span></td>
+          <td>${r.checkin_time}</td>
+          <td><span class="badge badge-red">${r.late_by_minutes}m</span></td>
+        </tr>`).join('')}</tbody>
+    </table>`;
+}
+
+async function loadAbsent() {
+  let d = await api('dashboard.get_absence_today', { team: currentTeam });
+  if(!d) d = mockAbsent();
+  document.getElementById('absent-count').textContent = d.length + ' absent today';
+  if(!d.length) { document.getElementById('absent-table-wrap').innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div>Full attendance!</div>'; return; }
+  document.getElementById('absent-table-wrap').innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>Employee</th><th>Department</th></tr></thead>
+      <tbody>${d.map(r=>`
+        <tr>
+          <td><div class="emp-cell">${avatar(r.employee_name)}<div><div class="emp-name">${r.employee_name}</div></div></div></td>
+          <td><span class="badge badge-gray">${r.department||'—'}</span></td>
+        </tr>`).join('')}</tbody>
+    </table>`;
+}
+
+async function loadWorkHours() {
+  let d = await api('dashboard.get_work_hours_summary', { period: currentPeriod, team: currentTeam });
+  if(!d) d = mockHours();
+
+  const ctx = document.getElementById('chart-hours').getContext('2d');
+  if(hoursChart) hoursChart.destroy();
+  hoursChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: d.map(r => r.employee_name.split(' ')[0]),
+      datasets: [{
+        data: d.map(r => r.hours),
+        backgroundColor: d.map((_,i) => `hsl(${220 + i*15},70%,55%)`),
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,.04)' }, ticks: { color: '#64748b', font: { size: 10 } } },
+        y: { grid: { display: false }, ticks: { color: '#e2e8f0', font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+async function loadHolidays() {
+  let d = await api('dashboard.get_upcoming_holidays', { days: 60 });
+  if(!d) d = mockHolidays();
+  if(!d.length) { document.getElementById('holidays-list').innerHTML = '<div class="empty-state"><div class="empty-icon">🎉</div>No upcoming holidays</div>'; return; }
+  document.getElementById('holidays-list').innerHTML = d.map(h => {
+    const dt = new Date(h.holiday_date);
+    return `<div class="holiday-item">
+      <div class="holiday-date-box">
+        <div class="holiday-day">${dt.getDate()}</div>
+        <div class="holiday-month">${dt.toLocaleString('en',{month:'short'})}</div>
+      </div>
+      <div class="holiday-name">${h.description||'Holiday'}</div>
+    </div>`;
+  }).join('');
+}
+
+async function loadUpcomingLeaves() {
+  let d = await api('dashboard.get_upcoming_leaves', { team: currentTeam, days: 14 });
+  if(!d) d = mockLeaves();
+  if(!d.length) { document.getElementById('leaves-list').innerHTML = '<div class="empty-state"><div class="empty-icon">🌴</div>No upcoming leaves</div>'; return; }
+  document.getElementById('leaves-list').innerHTML = d.map(l => `
+    <div class="holiday-item">
+      <div class="holiday-date-box">
+        <div class="holiday-day">${new Date(l.from_date).getDate()}</div>
+        <div class="holiday-month">${new Date(l.from_date).toLocaleString('en',{month:'short'})}</div>
+      </div>
+      <div>
+        <div class="emp-name">${l.employee_name}</div>
+        <div class="emp-dept">${l.leave_type} · ${l.total_leave_days}d</div>
+      </div>
+    </div>`).join('');
+}
+
+// ─────────────────────────────────────────
+//  MY TEAM PAGE
+// ─────────────────────────────────────────
+async function loadMyTeam() {
+  let d = await api('dashboard.get_employees', { team: currentTeam });
+  if(!d) d = mockTeam();
+  document.getElementById('team-table-wrap').innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>Employee</th><th>Department</th><th>Designation</th><th>Joined</th></tr></thead>
+      <tbody>${d.map(e=>`
+        <tr>
+          <td><div class="emp-cell">${avatar(e.employee_name)}<div>
+            <div class="emp-name">${e.employee_name}</div>
+            <div class="emp-dept">${e.name}</div>
+          </div></div></td>
+          <td>${e.department||'—'}</td>
+          <td>${e.designation||'—'}</td>
+          <td>${e.date_of_joining||'—'}</td>
+        </tr>`).join('')}</tbody>
+    </table>`;
+}
+
+// ─────────────────────────────────────────
+//  TIMESHEET / MATRIX
+// ─────────────────────────────────────────
+async function loadMatrix() {
+  const now = new Date();
+  let d = await api('dashboard.get_monthly_attendance', { month: now.getMonth()+1, year: now.getFullYear(), team: currentTeam });
+
+  if(!d) {
+    document.getElementById('matrix-wrap').innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div>Attendance data not available</div>';
+    return;
+  }
+
+  const days = d.days;
+  const employees = d.employees;
+  const short = days.map(day => { const dt = new Date(day); return dt.getDate(); });
+  const abbr  = { Present:'P', Absent:'A', 'Work From Home':'WFH', 'Half Day':'H', '':'' };
+
+  const headerCells = short.map(n=>`<th style="text-align:center">${n}</th>`).join('');
+  const rows = employees.map(emp => {
+    const cells = days.map(day => {
+      const s = emp.attendance[day] || '';
+      const cls = 'att-' + (abbr[s]||'');
+      return `<td><div class="att-cell ${cls}">${abbr[s]||'·'}</div></td>`;
+    }).join('');
+    return `<tr>
+      <td style="padding-right:12px"><div class="emp-cell">${avatar(emp.employee_name)}<div class="emp-name">${emp.employee_name}</div></div></td>
+      ${cells}
+    </tr>`;
+  }).join('');
+
+  document.getElementById('matrix-wrap').innerHTML = `
+    <table class="matrix-table">
+      <thead><tr><th>Employee</th>${headerCells}</tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+// ─────────────────────────────────────────
+//  LEAVE FORM
+// ─────────────────────────────────────────
+async function initLeaveForm() {
+  // Load employees
+  let emps = await api('dashboard.get_employees');
+  if(!emps) emps = mockTeam();
+  const empSel = document.getElementById('lv-employee');
+  empSel.innerHTML = '<option value="">Select Employee…</option>' + emps.map(e=>`<option value="${e.name}">${e.employee_name}</option>`).join('');
+
+  // Load leave types
+  let types = await api('dashboard.get_leave_types');
+  if(!types) types = [{name:'Annual Leave'},{name:'Sick Leave'},{name:'Casual Leave'},{name:'Maternity Leave'}];
+  const typeSel = document.getElementById('lv-type');
+  typeSel.innerHTML = '<option value="">Select Type…</option>' + types.map(t=>`<option value="${t.name}">${t.name}</option>`).join('');
+
+  // Set default dates
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('lv-from').value = today;
+  document.getElementById('lv-to').value   = today;
+}
+
+async function loadLeaveBalance() {
+  const emp  = document.getElementById('lv-employee').value;
+  const type = document.getElementById('lv-type').value;
+  const el   = document.getElementById('lv-balance');
+  if(!emp || !type) { el.textContent = '—'; return; }
+  el.textContent = '…';
+  const d = await api('dashboard.get_leave_balance', { employee: emp, leave_type: type });
+  el.textContent = d ? d.balance + ' days' : '—';
+}
+
+function toggleHalfDay() {
+  const on = document.getElementById('lv-halfday').checked;
+  document.getElementById('halfday-date-group').style.display = on ? '' : 'none';
+}
+
+async function submitLeave() {
+  const btn  = document.getElementById('submit-leave-btn');
+  const emp  = document.getElementById('lv-employee').value;
+  const type = document.getElementById('lv-type').value;
+  const from = document.getElementById('lv-from').value;
+  const to   = document.getElementById('lv-to').value;
+
+  if(!emp||!type||!from||!to) { toast('Please fill all required fields', 'error'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="width:14px;height:14px"></div> Submitting…';
+
+  const res = await api('dashboard.submit_leave_application', {
+    employee: emp, leave_type: type, from_date: from, to_date: to,
+    reason: document.getElementById('lv-reason').value,
+    half_day: document.getElementById('lv-halfday').checked ? 1 : 0,
+  });
+
+  btn.disabled = false;
+  btn.innerHTML = '✈️ Submit Leave';
+
+  if(res && res.success) {
+    toast('Leave submitted successfully! Ref: ' + res.name, 'success');
+    resetLeaveForm();
+  } else {
+    toast('Submission failed — check ERPNext logs', 'error');
+  }
+}
+
+function resetLeaveForm() {
+  document.getElementById('lv-employee').value = '';
+  document.getElementById('lv-type').value = '';
+  document.getElementById('lv-reason').value = '';
+  document.getElementById('lv-halfday').checked = false;
+  document.getElementById('lv-balance').textContent = '—';
+  toggleHalfDay();
+}
+
+// ─────────────────────────────────────────
+//  LEAVE SUMMARY & MANAGE
+// ─────────────────────────────────────────
+async function loadLeaveSummary() {
+  let d = await api('dashboard.get_leave_summary');
+  if(!d) d = mockLeaveSummary();
+  document.getElementById('leave-summary-wrap').innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>Employee</th><th>Leave Type</th><th>From</th><th>To</th><th>Days</th></tr></thead>
+      <tbody>${d.map(r=>`
+        <tr>
+          <td>${r.employee_name}</td>
+          <td><span class="badge badge-blue">${r.leave_type}</span></td>
+          <td>${r.from_date}</td>
+          <td>${r.to_date}</td>
+          <td>${r.total_leave_days}</td>
+        </tr>`).join('')}</tbody>
+    </table>`;
+}
+
+async function loadManageLeave() {
+  let d = await api('dashboard.get_upcoming_leaves', { days: 90 });
+  if(!d) d = mockLeaves();
+  document.getElementById('manage-leave-wrap').innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>Employee</th><th>Leave Type</th><th>From</th><th>To</th><th>Days</th><th>Status</th></tr></thead>
+      <tbody>${d.map(r=>`
+        <tr>
+          <td>${r.employee_name}</td>
+          <td>${r.leave_type}</td>
+          <td>${r.from_date}</td>
+          <td>${r.to_date}</td>
+          <td>${r.total_leave_days}</td>
+          <td><span class="badge badge-green">Approved</span></td>
+        </tr>`).join('')}</tbody>
+    </table>`;
+}
+
+// ─────────────────────────────────────────
+//  HELPERS
+// ─────────────────────────────────────────
+function avatar(name) {
+  const initials = (name||'?').split(' ').slice(0,2).map(n=>n[0]).join('').toUpperCase();
+  const hue = [...(name||'')].reduce((a,c)=>a+c.charCodeAt(0),0) % 360;
+  return `<div class="avatar" style="background:hsl(${hue},55%,42%)">${initials}</div>`;
+}
+
+function toast(msg, type='success') {
+  const el = document.getElementById('toast');
+  el.textContent = (type==='success'?'✅ ':'❌ ') + msg;
+  el.className = 'show ' + type;
+  setTimeout(()=>el.classList.remove('show'), 3500);
+}
+
+function showAddUser() {
+  toast('Open ERPNext Employee module to add users', 'success');
+}
+
+// ─────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────
+async function init() {
+  // Load department list
+  let depts = await api('dashboard.get_departments');
+  if(depts && depts.length) {
+    const sel = document.getElementById('team-filter');
+    depts.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.name; opt.textContent = d.name;
+      sel.appendChild(opt);
+    });
+  }
+
+  // Auto-refresh every 60s on overview
+  loadOverview();
+  setInterval(()=>{ if(currentPage==='overview') loadKpis(); }, 60000);
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

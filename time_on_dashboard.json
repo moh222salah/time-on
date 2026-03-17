@@ -1,0 +1,12 @@
+{
+  "doctype": "Page",
+  "module": "HR",
+  "name": "time-on-dashboard",
+  "page_name": "time-on-dashboard",
+  "title": "Time ON",
+  "roles": [
+    {"role": "HR Manager"},
+    {"role": "HR User"},
+    {"role": "System Manager"}
+  ]
+}
